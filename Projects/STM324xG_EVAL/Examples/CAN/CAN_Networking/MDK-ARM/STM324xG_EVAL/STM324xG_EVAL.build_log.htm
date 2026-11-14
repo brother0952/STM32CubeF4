@@ -1,0 +1,151 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ¦ÌVision V5.29.0.0
+Copyright (C) 2019 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: 1 1, 1, LIC=QF8PC-7S5MU-9GY70-BMZSV-ZFP8L-2LIC0
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Plus  Version: 5.29.0.0
+Toolchain Path:  d:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 6 (build 750)
+Assembler:       Armasm.exe V5.06 update 6 (build 750)
+Linker/Locator:  ArmLink.exe V5.06 update 6 (build 750)
+Library Manager: ArmAr.exe V5.06 update 6 (build 750)
+Hex Converter:   FromElf.exe V5.06 update 6 (build 750)
+CPU DLL:         SARMCM3.DLL V5.29.0.0
+Dialog DLL:      DCM.DLL V1.17.3.0
+Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.0.7.0
+Dialog DLL:      TCM.DLL V1.36.5.0
+ 
+<h2>Project:</h2>
+F:\git\github\STM32CubeF4\Projects\STM324xG_EVAL\Examples\CAN\CAN_Networking\MDK-ARM\Project.uvprojx
+Project File Date:  06/13/2024
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 6 (build 750)', folder: 'd:\Keil_v5\ARM\ARMCC\Bin'
+Build target 'STM324xG_EVAL'
+assembling startup_stm32f407xx.s...
+compiling stm324xg_eval.c...
+"no source": Error:  #5: cannot open source input file "..\..\..\..\..\..\Drivers\BSP\STM324xG_EVAL\stm324xg_eval.c": No such file or directory
+..\..\..\..\..\..\Drivers\BSP\STM324xG_EVAL\stm324xg_eval.c: 0 warnings, 1 error
+compiling stm324xg_eval_io.c...
+"no source": Error:  #5: cannot open source input file "..\..\..\..\..\..\Drivers\BSP\STM324xG_EVAL\stm324xg_eval_io.c": No such file or directory
+..\..\..\..\..\..\Drivers\BSP\STM324xG_EVAL\stm324xg_eval_io.c: 0 warnings, 1 error
+compiling main.c...
+..\Inc\main.h(25): error:  #5: cannot open source input file "stm324xg_eval.h": No such file or directory
+  #include "stm324xg_eval.h"
+..\Src\main.c: 0 warnings, 1 error
+compiling stm32f4xx_it.c...
+..\Inc\main.h(25): error:  #5: cannot open source input file "stm324xg_eval.h": No such file or directory
+  #include "stm324xg_eval.h"
+..\Src\stm32f4xx_it.c: 0 warnings, 1 error
+compiling stm32f4xx_hal_msp.c...
+..\Inc\main.h(25): error:  #5: cannot open source input file "stm324xg_eval.h": No such file or directory
+  #include "stm324xg_eval.h"
+..\Src\stm32f4xx_hal_msp.c: 0 warnings, 1 error
+compiling system_stm32f4xx.c...
+compiling stm32f4xx_ll_fsmc.c...
+compiling stm32f4xx_hal_gpio.c...
+compiling stm32f4xx_hal_rcc.c...
+compiling stm32f4xx_hal_cortex.c...
+compiling stm32f4xx_hal_sram.c...
+compiling stm32f4xx_hal.c...
+compiling stm32f4xx_hal_dma.c...
+compiling stm32f4xx_hal_can.c...
+compiling stmpe811.c...
+"no source": Error:  #5: cannot open source input file "..\..\..\..\..\..\Drivers\BSP\Components\stmpe811\stmpe811.c": No such file or directory
+..\..\..\..\..\..\Drivers\BSP\Components\stmpe811\stmpe811.c: 0 warnings, 1 error
+compiling stm32f4xx_hal_uart.c...
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1419): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+      ATOMIC_SET_BIT(huart->Instance->CR3, USART_CR3_DMAT);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1476): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+      ATOMIC_CLEAR_BIT(huart->Instance->CR3, USART_CR3_DMAT);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1483): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+      ATOMIC_CLEAR_BIT(huart->Instance->CR1, USART_CR1_PEIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1505): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+      ATOMIC_SET_BIT(huart->Instance->CR3, USART_CR3_DMAT);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1516): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+        ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_PEIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1518): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+      ATOMIC_SET_BIT(huart->Instance->CR3, USART_CR3_EIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1546): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+      ATOMIC_CLEAR_BIT(huart->Instance->CR3, USART_CR3_DMAT);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1560): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+      ATOMIC_CLEAR_BIT(huart->Instance->CR3, USART_CR3_DMAR);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1737): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+          ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_IDLEIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1797): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+          ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_IDLEIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1862): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR1_TXEIE | USART_CR1_TCIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(1951): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_TXEIE | USART_CR1_TCIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2002): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2065): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR1_TXEIE | USART_CR1_TCIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2198): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_TXEIE | USART_CR1_TCIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2275): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2421): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+            ATOMIC_CLEAR_BIT(huart->Instance->CR3, USART_CR3_DMAR);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2503): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+            ATOMIC_CLEAR_BIT(huart->Instance->CR1, USART_CR1_PEIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2544): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+          ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2764): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+    ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_SBK);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2791): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+    ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_RWU);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2819): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, USART_CR1_RWU);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(2998): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+      ATOMIC_CLEAR_BIT(huart->Instance->CR3, USART_CR3_DMAT);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(3001): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+      ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_TCIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(3052): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+      ATOMIC_CLEAR_BIT(huart->Instance->CR1, USART_CR1_PEIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(3303): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+      ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_PEIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(3307): warning:  #223-D: function "ATOMIC_SET_BIT" declared implicitly
+    ATOMIC_SET_BIT(huart->Instance->CR3, USART_CR3_EIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(3324): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_TXEIE | USART_CR1_TCIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(3338): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+    ATOMIC_CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE));
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c(3650): warning:  #223-D: function "ATOMIC_CLEAR_BIT" declared implicitly
+          ATOMIC_CLEAR_BIT(huart->Instance->CR1, USART_CR1_IDLEIE);
+..\..\..\..\..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c: 30 warnings, 0 errors
+compiling stm32f4xx_hal_i2c.c...
+"STM324xG_EVAL\STM324xG_EVAL.axf" - 6 Error(s), 30 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                http://www.keil.com/pack/ARM.CMSIS.5.6.0.pack
+                ARM.CMSIS.5.6.0
+                CMSIS (Cortex Microcontroller Software Interface Standard)
+   * Component: CORE Version: 5.3.0
+
+Package Vendor: Keil
+                http://www.keil.com/pack/Keil.STM32F4xx_DFP.2.15.0.pack
+                Keil.STM32F4xx_DFP.2.15.0
+                STMicroelectronics STM32F4 Series Device Support, Drivers and Examples
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_STM324xG_EVAL
+  d:\Keil_v5\ARM\PACK\ARM\CMSIS\5.6.0\CMSIS\Core\Include
+  d:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.15.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE:5.3.0
+Target not created.
+Build Time Elapsed:  00:00:33
+</pre>
+</body>
+</html>

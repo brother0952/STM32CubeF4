@@ -1,0 +1,36 @@
+# Keil MDK user-specific files
+*.uvguix.*
+*.uvoptx
+
+# Keil MDK generated build output
+MDK-ARM/STM32F4-Discovery/
+MDK-ARM/DebugConfig/
+MDK-ARM/RTE/
+MDK-ARM/EventRecorderStub.scvd
+MDK-ARM/startup_stm32f407xx.lst
+MDK-ARM/*.log
+
+# Common compiler / linker artifacts
+*.o
+*.d
+*.crf
+*.axf
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.dep
+*.lnp
+*.iex
+
+# Editor / OS temporary files
+*.bak
+*.orig
+*.rej
+*.tmp
+*.swp
+*~
+Thumbs.db
+Desktop.ini
+.vscode/

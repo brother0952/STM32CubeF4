@@ -155,6 +155,7 @@ void     LCD_DrawImageScaled2x(uint16_t X, uint16_t Y, uint16_t Width, uint16_t 
 
 void     LCD_DrawChar(uint16_t X, uint16_t Y, char Character, uint16_t Color, uint16_t BackColor);
 void     LCD_DrawString(uint16_t X, uint16_t Y, const char *String, uint16_t Color, uint16_t BackColor);
+void     LCD_DrawString2x(uint16_t X, uint16_t Y, const char *String, uint16_t Color, uint16_t BackColor);
 
 uint16_t LCD_ReadID(void);
 

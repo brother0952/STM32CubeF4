@@ -1,8 +1,7 @@
 /**
   ******************************************************************************
   * @file    main.c
-  * @brief   SPI LCD demo for STM32F4-Discovery
-  *          240x320 ILI9341 / ST7789 panel on SPI2
+  * @brief   OV7670 live preview on a 240x320 SPI LCD (STM32F4-Discovery)
   ******************************************************************************
   */
 
@@ -11,199 +10,460 @@
 #include "lcd.h"
 #include "ov7670.h"
 
+/* 1 = 160x120 (fast), 2 = 320x240 (full screen, 4x more SPI traffic). */
+#define CAMERA_PREVIEW_SCALE      1U
+
+/* 1 = show the camera image, 0 = show frame-rate statistics instead.
+ * The image drawing path is kept below and can be re-enabled by setting this to 1. */
+#define CAMERA_DISPLAY_IMAGE      0U
+
+/* Show CAM/MCU/CAP/DRAW measurements. */
+#define CAMERA_SHOW_STATS         1U
+
+/* Low light can stretch the OV7670 exposure to about one second. */
+#define CAMERA_CAPTURE_TIMEOUT_MS 2000U
+
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void Error_Handler(void);
-static void LCD_ShowTestPattern(void);
 
 #if (OV7670_ENABLE != 0)
 static void Camera_Preview(void);
+#if (CAMERA_SHOW_STATS != 0)
+static void Camera_EnableCycleCounter(void);
+static void DebugUart_Init(void);
+static void DebugUart_Write(const char *Text);
+static void DebugUart_WriteN(const char *Text, uint8_t Length);
+static void Camera_LogStats(uint32_t DisplayFps10, uint32_t CaptureMs);
+static void Camera_DrawStats(uint32_t CameraFps10, uint32_t DisplayFps10,
+                             uint32_t CaptureMs, uint32_t DrawMs10);
+#endif
 #endif
 
 /* Private functions ---------------------------------------------------------*/
 
 /**
-  * @brief  Main program.
+  * @brief  Main program: initialize the LCD and run the camera preview.
   */
 int main(void)
 {
-  uint16_t x = 0U;
-  uint16_t oldX = 0U;
-  uint16_t y = 0U;
-  uint8_t  dir = 1U;
-
   HAL_Init();
 
   SystemClock_Config();
 
-  BSP_LED_Init(LED3);
-  BSP_LED_Init(LED4);
-  BSP_LED_Init(LED5);
-  BSP_LED_Init(LED6);
+#if (OV7670_ENABLE != 0) && (CAMERA_SHOW_STATS != 0)
+  Camera_EnableCycleCounter();
+  DebugUart_Init();
+#endif
 
+  BSP_LED_Init(LED3);
   BSP_LED_On(LED3);
 
   LCD_Init();
-  BSP_LED_On(LED4);
-
-  /* Obvious color cycle: if the panel stays white, no SPI command is getting in. */
-  LCD_FillScreen(LCD_COLOR_RED);
-  HAL_Delay(500U);
-  LCD_FillScreen(LCD_COLOR_GREEN);
-  HAL_Delay(500U);
-  LCD_FillScreen(LCD_COLOR_BLUE);
-  HAL_Delay(500U);
-  BSP_LED_On(LED5);
-
-  LCD_ShowTestPattern();
-  BSP_LED_On(LED6);
+  LCD_SetRotation(1U);
+  LCD_FillScreen(LCD_COLOR_BLACK);
 
 #if (OV7670_ENABLE != 0)
   if (OV7670_Init() == OV7670_OK)
   {
-    LCD_SetRotation(1U);
-    LCD_FillScreen(LCD_COLOR_BLACK);
+    OV7670_SetPolarityCombo(2U);
+    OV7670_SetFastCapture(1U);
+    OV7670_ResetFrameStats();
     Camera_Preview();
-    LCD_SetRotation(2U);
-    LCD_FillScreen(LCD_COLOR_BLACK);
-    LCD_DrawString(8U, 8U, "Camera stopped", LCD_COLOR_RED, LCD_COLOR_BLACK);
-    HAL_Delay(1000U);
   }
   else
   {
-    LCD_DrawString(8U, 8U, "OV7670 not found", LCD_COLOR_RED, LCD_COLOR_BLACK);
-    HAL_Delay(1000U);
+    LCD_DrawString2x(8U, 8U, "CAM INIT ERR", LCD_COLOR_RED, LCD_COLOR_BLACK);
   }
+#else
+  LCD_DrawString2x(8U, 8U, "CAM DISABLED", LCD_COLOR_GRAY, LCD_COLOR_BLACK);
 #endif
-
-  y = (uint16_t)(LCD_Info.Height - 24U);
 
   while (1)
   {
-    /* Move a small square along the bottom of the screen */
-    LCD_FillRect(oldX, y, 24U, 24U, LCD_COLOR_BLACK);
-    LCD_FillRect(x, y, 24U, 24U, LCD_COLOR_RED);
-    oldX = x;
-
-    if (dir != 0U)
-    {
-      if ((uint16_t)(x + 8U + 24U) >= LCD_Info.Width)
-      {
-        dir = 0U;
-      }
-      else
-      {
-        x = (uint16_t)(x + 8U);
-      }
-    }
-    else
-    {
-      if (x < 8U)
-      {
-        dir = 1U;
-      }
-      else
-      {
-        x = (uint16_t)(x - 8U);
-      }
-    }
-
     BSP_LED_Toggle(LED3);
-    HAL_Delay(30U);
+    HAL_Delay(500U);
   }
 }
 
 #if (OV7670_ENABLE != 0)
-static uint8_t s_cameraFrame[OV7670_FRAME_BYTES];
+static uint32_t s_cameraFrame[OV7670_FRAME_BYTES / 4U];
+
+#if (CAMERA_SHOW_STATS != 0)
+static void Camera_EnableCycleCounter(void)
+{
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0U;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+static void DebugUart_Init(void)
+{
+  GPIO_InitTypeDef gpio = {0};
+
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_USART3_CLK_ENABLE();
+
+  gpio.Pin = GPIO_PIN_8 | GPIO_PIN_9;
+  gpio.Mode = GPIO_MODE_AF_PP;
+  gpio.Pull = GPIO_PULLUP;
+  gpio.Speed = GPIO_SPEED_FREQ_HIGH;
+  gpio.Alternate = GPIO_AF7_USART3;
+  HAL_GPIO_Init(GPIOD, &gpio);
+
+  USART3->CR1 = 0U;
+  USART3->BRR = (HAL_RCC_GetPCLK1Freq() + 57600U) / 115200U;
+  USART3->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+
+  DebugUart_Write("DBG USART3 PD8/PD9 115200\r\n");
+}
+
+static void DebugUart_PutChar(char Ch)
+{
+  while ((USART3->SR & USART_SR_TXE) == 0U)
+  {
+  }
+  USART3->DR = (uint8_t)Ch;
+}
+
+static void DebugUart_Write(const char *Text)
+{
+  while (*Text != '\0')
+  {
+    DebugUart_PutChar(*Text);
+    Text++;
+  }
+}
+
+static void DebugUart_WriteN(const char *Text, uint8_t Length)
+{
+  while (Length > 0U)
+  {
+    DebugUart_PutChar(*Text);
+    Text++;
+    Length--;
+  }
+}
+
+static uint8_t Camera_AppendString(char *Dst, uint8_t Pos, const char *Src)
+{
+  while (*Src != '\0')
+  {
+    Dst[Pos] = *Src;
+    Pos++;
+    Src++;
+  }
+  return Pos;
+}
+
+static uint8_t Camera_AppendUInt(char *Dst, uint8_t Pos, uint32_t Value)
+{
+  char tmp[10];
+  uint8_t n = 0U;
+
+  do
+  {
+    tmp[n] = (char)('0' + (Value % 10U));
+    n++;
+    Value /= 10U;
+  } while ((Value != 0U) && (n < sizeof(tmp)));
+
+  while (n > 0U)
+  {
+    n--;
+    Dst[Pos] = tmp[n];
+    Pos++;
+  }
+  return Pos;
+}
+
+static uint8_t Camera_AppendTenths(char *Dst, uint8_t Pos, uint32_t Value10)
+{
+  Pos = Camera_AppendUInt(Dst, Pos, Value10 / 10U);
+  Dst[Pos] = '.';
+  Pos++;
+  Dst[Pos] = (char)('0' + (Value10 % 10U));
+  Pos++;
+  return Pos;
+}
+
+static void Camera_LogStats(uint32_t DisplayFps10, uint32_t CaptureMs)
+{
+  char line[160];
+  uint8_t p = 0U;
+
+  p = Camera_AppendString(line, p, "FPS ");
+  p = Camera_AppendTenths(line, p, DisplayFps10);
+  p = Camera_AppendString(line, p, " CAP ");
+  p = Camera_AppendUInt(line, p, CaptureMs);
+  p = Camera_AppendString(line, p, " FC ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.FrameCount);
+  p = Camera_AppendString(line, p, " ST ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.CaptureStatus);
+  p = Camera_AppendString(line, p, " VS ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.VsyncEdges);
+  p = Camera_AppendString(line, p, " PL ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.PclkEdges / 1000U);
+  p = Camera_AppendString(line, p, " CL ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.Clkrc);
+  p = Camera_AppendString(line, p, " DB ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.Dblv);
+  p = Camera_AppendString(line, p, " AE ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.Aec);
+  p = Camera_AppendString(line, p, " GN ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.Gain);
+  p = Camera_AppendString(line, p, " DL ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.DummyRows);
+  p = Camera_AppendString(line, p, " AD ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.AdvRows);
+  p = Camera_AppendString(line, p, " NT ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.NtCtrl);
+  p = Camera_AppendString(line, p, " C11 ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.Com11);
+  p = Camera_AppendString(line, p, " C8 ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.Com8);
+  p = Camera_AppendString(line, p, " C9 ");
+  p = Camera_AppendUInt(line, p, OV7670_Debug.Com9);
+  line[p] = '\r';
+  p++;
+  line[p] = '\n';
+  p++;
+  DebugUart_WriteN(line, p);
+}
+
+#if (CAMERA_DISPLAY_IMAGE == 0)
+static void Camera_PadLine(char *Dst, uint8_t Pos)
+{
+  while (Pos < 19U)
+  {
+    Dst[Pos] = ' ';
+    Pos++;
+  }
+  Dst[Pos] = '\0';
+}
+
+static void Camera_BuildFpsLine(char *Dst, const char *Label, uint32_t Fps10)
+{
+  uint8_t p = 0U;
+
+  p = Camera_AppendString(Dst, p, Label);
+  Dst[p] = ' ';
+  p++;
+  p = Camera_AppendTenths(Dst, p, Fps10);
+  p = Camera_AppendString(Dst, p, " FPS");
+  Camera_PadLine(Dst, p);
+}
+
+static void Camera_BuildIntLine(char *Dst, const char *Label, uint32_t Value,
+                                const char *Unit)
+{
+  uint8_t p = 0U;
+
+  p = Camera_AppendString(Dst, p, Label);
+  Dst[p] = ' ';
+  p++;
+  p = Camera_AppendUInt(Dst, p, Value);
+  p = Camera_AppendString(Dst, p, Unit);
+  Camera_PadLine(Dst, p);
+}
+
+#endif
+
+static void Camera_DrawStats(uint32_t CameraFps10, uint32_t DisplayFps10,
+                             uint32_t CaptureMs, uint32_t DrawMs10)
+{
+#if (CAMERA_DISPLAY_IMAGE == 0)
+  char line[24];
+
+  (void)CameraFps10;
+
+  Camera_BuildFpsLine(line, "FPS", DisplayFps10);
+  LCD_DrawString2x(20U, 50U, line, LCD_COLOR_GREEN, LCD_COLOR_BLACK);
+
+  Camera_BuildIntLine(line, "CAP", CaptureMs, " ms");
+  LCD_DrawString2x(20U, 90U, line, LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+
+  (void)DrawMs10;
+
+  Camera_BuildIntLine(line, "FC", OV7670_Debug.FrameCount, "");
+  LCD_DrawString2x(20U, 130U, line, LCD_COLOR_CYAN, LCD_COLOR_BLACK);
+
+  Camera_BuildIntLine(line, "ST", OV7670_Debug.CaptureStatus, "");
+  LCD_DrawString2x(20U, 170U, line, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+
+  {
+    char dbg[40];
+    uint8_t q = 0U;
+
+    q = Camera_AppendString(dbg, q, "VS ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.VsyncEdges);
+    q = Camera_AppendString(dbg, q, " PL ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.PclkEdges / 1000U);
+    q = Camera_AppendString(dbg, q, " CL ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.Clkrc);
+    q = Camera_AppendString(dbg, q, " DB ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.Dblv);
+    dbg[q] = '\0';
+    LCD_DrawString(2U, 200U, dbg, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+
+    q = 0U;
+    q = Camera_AppendString(dbg, q, "AE ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.Aec);
+    q = Camera_AppendString(dbg, q, " GN ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.Gain);
+    q = Camera_AppendString(dbg, q, " DL ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.DummyRows);
+    q = Camera_AppendString(dbg, q, " AD ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.AdvRows);
+    dbg[q] = '\0';
+    LCD_DrawString(2U, 210U, dbg, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+
+    q = 0U;
+    q = Camera_AppendString(dbg, q, "NT ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.NtCtrl);
+    q = Camera_AppendString(dbg, q, " C11 ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.Com11);
+    q = Camera_AppendString(dbg, q, " C8 ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.Com8);
+    q = Camera_AppendString(dbg, q, " C9 ");
+    q = Camera_AppendUInt(dbg, q, OV7670_Debug.Com9);
+    dbg[q] = '\0';
+    LCD_DrawString(2U, 220U, dbg, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+  }
+#else
+  char line[48];
+  uint8_t p = 0U;
+
+  p = Camera_AppendString(line, p, "CAM ");
+  p = Camera_AppendTenths(line, p, CameraFps10);
+  p = Camera_AppendString(line, p, " LCD ");
+  p = Camera_AppendTenths(line, p, DisplayFps10);
+  p = Camera_AppendString(line, p, " CAP ");
+  p = Camera_AppendUInt(line, p, CaptureMs);
+  p = Camera_AppendString(line, p, "ms DRAW ");
+  p = Camera_AppendTenths(line, p, DrawMs10);
+  p = Camera_AppendString(line, p, "ms");
+  line[p] = '\0';
+
+  LCD_FillRect(0U, 0U, LCD_Info.Width, 10U, LCD_COLOR_BLACK);
+  LCD_DrawString(2U, 1U, line, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+#endif
+}
+#endif
 
 static void Camera_Preview(void)
 {
+  uint8_t *frame = (uint8_t *)s_cameraFrame;
+#if (CAMERA_SHOW_STATS != 0)
+  uint32_t statStart = HAL_GetTick();
+  uint32_t statFrames = 0U;
+#endif
+
+#if (CAMERA_DISPLAY_IMAGE == 0)
+  while (1)
+  {
+    if (OV7670_Capture(frame, CAMERA_CAPTURE_TIMEOUT_MS) == OV7670_OK)
+    {
+#if (CAMERA_SHOW_STATS != 0)
+      statFrames++;
+#endif
+      BSP_LED_Toggle(LED3);
+    }
+
+#if (CAMERA_SHOW_STATS != 0)
+    {
+      uint32_t now = HAL_GetTick();
+      uint32_t elapsed = now - statStart;
+
+      if (elapsed >= 1000U)
+      {
+        uint32_t displayFps10 = (statFrames * 10000U) / elapsed;
+
+        Camera_DrawStats(0U, displayFps10,
+                         OV7670_Debug.FramePeriodMs, 0U);
+        Camera_LogStats(displayFps10, OV7670_Debug.FramePeriodMs);
+
+        statStart = now;
+        statFrames = 0U;
+      }
+    }
+#endif
+  }
+#else
   uint16_t x;
   uint16_t y;
-  uint8_t errors = 0U;
+  uint8_t *next = OV7670_GetScratchBuffer();
+#if (CAMERA_SHOW_STATS != 0)
+  uint32_t statDrawCycles = 0U;
+#endif
 
-  if (LCD_Info.Width > (OV7670_WIDTH * 2U))
-  {
-    x = (uint16_t)((LCD_Info.Width - (OV7670_WIDTH * 2U)) / 2U);
-  }
-  else
-  {
-    x = 0U;
-  }
+  x = (LCD_Info.Width > (OV7670_WIDTH * CAMERA_PREVIEW_SCALE)) ?
+      (uint16_t)((LCD_Info.Width - (OV7670_WIDTH * CAMERA_PREVIEW_SCALE)) / 2U) : 0U;
+  y = (LCD_Info.Height > (OV7670_HEIGHT * CAMERA_PREVIEW_SCALE)) ?
+      (uint16_t)((LCD_Info.Height - (OV7670_HEIGHT * CAMERA_PREVIEW_SCALE)) / 2U) : 0U;
 
-  if (LCD_Info.Height > (OV7670_HEIGHT * 2U))
-  {
-    y = (uint16_t)((LCD_Info.Height - (OV7670_HEIGHT * 2U)) / 2U);
-  }
-  else
-  {
-    y = 0U;
-  }
+  (void)OV7670_Capture(frame, CAMERA_CAPTURE_TIMEOUT_MS);
 
   while (1)
   {
-    if (OV7670_Capture(s_cameraFrame, 1000U) == OV7670_OK)
+    uint32_t drawStart;
+    uint32_t drawCycles;
+
+    if (OV7670_StartCapture(next) != OV7670_OK)
     {
-      LCD_DrawImageScaled2x(x, y, OV7670_WIDTH, OV7670_HEIGHT, s_cameraFrame);
-      errors = 0U;
+      continue;
     }
-    else
+
+    drawStart = DWT->CYCCNT;
+
+#if (CAMERA_PREVIEW_SCALE == 2U)
+    LCD_DrawImageScaled2x(x, y, OV7670_WIDTH, OV7670_HEIGHT, frame);
+#else
+    LCD_DrawImage(x, y, OV7670_WIDTH, OV7670_HEIGHT, frame);
+#endif
+
+    drawCycles = DWT->CYCCNT - drawStart;
+
+    if (OV7670_WaitCapture(next, CAMERA_CAPTURE_TIMEOUT_MS) == OV7670_OK)
     {
-      errors++;
-      if (errors >= 3U)
+      uint8_t *swap = frame;
+
+      frame = next;
+      next  = swap;
+#if (CAMERA_SHOW_STATS != 0)
+      statFrames++;
+      statDrawCycles += drawCycles;
+#endif
+      BSP_LED_Toggle(LED3);
+    }
+
+#if (CAMERA_SHOW_STATS != 0)
+    {
+      uint32_t now = HAL_GetTick();
+      uint32_t elapsed = now - statStart;
+
+      if (elapsed >= 1000U)
       {
-        return;
+        uint32_t cameraFps10 = (OV7670_Debug.FramePeriodMs != 0U) ?
+                               (10000U / OV7670_Debug.FramePeriodMs) : 0U;
+        uint32_t displayFps10 = (statFrames * 10000U) / elapsed;
+        uint32_t drawMs10 = (statFrames != 0U) ?
+                            ((statDrawCycles / statFrames) / 16800U) : 0U;
+
+        Camera_DrawStats(cameraFps10, displayFps10,
+                         OV7670_Debug.FramePeriodMs, drawMs10);
+        Camera_LogStats(displayFps10, OV7670_Debug.FramePeriodMs);
+
+        statStart = now;
+        statFrames = 0U;
+        statDrawCycles = 0U;
       }
     }
-
-    BSP_LED_Toggle(LED3);
+#endif
   }
+#endif
 }
 #endif
-
-/**
-  * @brief  Draw a test pattern to verify the display.
-  */
-static void LCD_ShowTestPattern(void)
-{
-  static const uint16_t colors[8] =
-  {
-    LCD_COLOR_RED,
-    LCD_COLOR_GREEN,
-    LCD_COLOR_BLUE,
-    LCD_COLOR_YELLOW,
-    LCD_COLOR_CYAN,
-    LCD_COLOR_MAGENTA,
-    LCD_COLOR_ORANGE,
-    LCD_COLOR_WHITE
-  };
-  uint8_t i;
-
-  LCD_FillScreen(LCD_COLOR_BLACK);
-
-  LCD_DrawString(8U, 8U, "STM32F4-Discovery", LCD_COLOR_WHITE, LCD_COLOR_BLACK);
-  LCD_DrawString(8U, 20U, "240x320 SPI LCD", LCD_COLOR_CYAN, LCD_COLOR_BLACK);
-#if (LCD_CONTROLLER == LCD_CONTROLLER_ILI9341)
-  LCD_DrawString(8U, 32U, "Controller: ILI9341", LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
-#else
-  LCD_DrawString(8U, 32U, "Controller: ST7789", LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
-#endif
-
-  for (i = 0U; i < 8U; i++)
-  {
-    LCD_FillRect((uint16_t)(i * 30U), 52U, 30U, 40U, colors[i]);
-  }
-
-  LCD_DrawRect(0U, 0U, LCD_Info.Width, LCD_Info.Height, LCD_COLOR_GRAY);
-  LCD_DrawRect(4U, 4U, (uint16_t)(LCD_Info.Width - 8U), (uint16_t)(LCD_Info.Height - 8U), LCD_COLOR_GRAY);
-
-  LCD_DrawLine(8U, 110U, (uint16_t)(LCD_Info.Width - 9U), (uint16_t)(LCD_Info.Height - 40U), LCD_COLOR_BLUE);
-
-  LCD_FillRect(8U, 120U, 100U, 60U, LCD_COLOR565(32U, 32U, 32U));
-  LCD_DrawString(16U, 136U, "LCD OK", LCD_COLOR_GREEN, LCD_COLOR565(32U, 32U, 32U));
-
-  LCD_DrawString(8U, (uint16_t)(LCD_Info.Height - 16U), "Hello, world!", LCD_COLOR_WHITE, LCD_COLOR_BLACK);
-}
 
 /**
   * @brief  System Clock Configuration

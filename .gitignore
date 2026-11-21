@@ -34,3 +34,7 @@ MDK-ARM/*.log
 Thumbs.db
 Desktop.ini
 .vscode/
+
+
+*.log
+*.htm

@@ -31,11 +31,11 @@ extern "C" {
 #define SPI_BUS_MOSI_PIN                GPIO_PIN_15
 
 /* APB1 = 42 MHz.
- * 16 -> 2.625 MHz (safe LCD default)
+ * 2  -> 21 MHz    (fast LCD mode; use 4 if the panel is unstable)
  * 4  -> 10.5 MHz  (SD fast mode after initialization)
  * 256 -> 164 kHz  (SD initialization, must be <= 400 kHz)
  */
-#define SPI_BUS_PRESCALER_LCD           SPI_BAUDRATEPRESCALER_16
+#define SPI_BUS_PRESCALER_LCD           SPI_BAUDRATEPRESCALER_2
 #define SPI_BUS_PRESCALER_SD_INIT       SPI_BAUDRATEPRESCALER_256
 #define SPI_BUS_PRESCALER_SD_FAST       SPI_BAUDRATEPRESCALER_4
 

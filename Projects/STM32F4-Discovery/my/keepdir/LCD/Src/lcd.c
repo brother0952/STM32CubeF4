@@ -788,6 +788,95 @@ void LCD_DrawString(uint16_t X, uint16_t Y, const char *String, uint16_t Color, 
 }
 
 /**
+  * @brief  Draw one character using Font8 scaled 2x (10x16).
+  */
+static void LCD_DrawChar2x(uint16_t X, uint16_t Y, char Character, uint16_t Color, uint16_t BackColor)
+{
+  const uint8_t *charData;
+  const uint8_t *rowData;
+  uint8_t  width;
+  uint8_t  height;
+  uint8_t  bytesPerRow;
+  uint8_t  drawWidth;
+  uint8_t  line[64];
+  uint8_t  row;
+  uint8_t  col;
+  uint8_t  pixel;
+  uint16_t pixelColor;
+
+  if ((uint8_t)Character < 0x20U || (uint8_t)Character > 0x7EU)
+  {
+    Character = (char)'?';
+  }
+
+  width       = (uint8_t)Font8.Width;
+  height      = (uint8_t)Font8.Height;
+  drawWidth   = (uint8_t)(width * 2U);
+  bytesPerRow = (uint8_t)((width + 7U) / 8U);
+
+  if ((X + drawWidth > LCD_Info.Width) || (Y + (height * 2U) > LCD_Info.Height))
+  {
+    return;
+  }
+
+  charData = &Font8.table[((uint8_t)Character - 0x20U) * height * bytesPerRow];
+
+  LCD_CS_LOW();
+  LCD_SetWindowInternal(X, Y, (uint16_t)(X + drawWidth - 1U), (uint16_t)(Y + (height * 2U) - 1U));
+
+  for (row = 0U; row < height; row++)
+  {
+    rowData = &charData[(uint16_t)row * bytesPerRow];
+    for (col = 0U; col < width; col++)
+    {
+      pixel = (uint8_t)((rowData[col >> 3] >> (7U - (col & 7U))) & 0x01U);
+      pixelColor = (pixel != 0U) ? Color : BackColor;
+      line[4U * col]      = (uint8_t)(pixelColor >> 8);
+      line[4U * col + 1U] = (uint8_t)(pixelColor & 0xFFU);
+      line[4U * col + 2U] = (uint8_t)(pixelColor >> 8);
+      line[4U * col + 3U] = (uint8_t)(pixelColor & 0xFFU);
+    }
+    LCD_Data(line, (uint32_t)drawWidth * 2U);
+    LCD_Data(line, (uint32_t)drawWidth * 2U);
+  }
+  LCD_CS_HIGH();
+}
+
+/**
+  * @brief  Draw a string using Font8 scaled 2x.
+  */
+void LCD_DrawString2x(uint16_t X, uint16_t Y, const char *String, uint16_t Color, uint16_t BackColor)
+{
+  uint16_t startX = X;
+  uint16_t charWidth = (uint16_t)(Font8.Width * 2U);
+  uint16_t charHeight = (uint16_t)(Font8.Height * 2U);
+
+  while (*String != '\0')
+  {
+    if (*String == '\n')
+    {
+      X = startX;
+      Y = (uint16_t)(Y + charHeight);
+    }
+    else if (*String == '\r')
+    {
+      /* ignore */
+    }
+    else
+    {
+      LCD_DrawChar2x(X, Y, *String, Color, BackColor);
+      X = (uint16_t)(X + charWidth);
+      if ((uint16_t)(X + charWidth) > LCD_Info.Width)
+      {
+        X = startX;
+        Y = (uint16_t)(Y + charHeight);
+      }
+    }
+    String++;
+  }
+}
+
+/**
   * @brief  Try to read the ILI9341 ID (0x9341). Requires MISO connected.
   * @retval Controller ID or 0 if it cannot be read.
   */
